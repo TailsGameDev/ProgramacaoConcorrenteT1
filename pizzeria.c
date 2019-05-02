@@ -44,6 +44,7 @@ void pizzeria_destroy() {
 }
 
 void pizza_assada(pizza_t* pizza) {
+  printf("pizza_assada\n");
 }
 
 int numMesas(int tam_grupo){
@@ -57,6 +58,7 @@ int numMesas(int tam_grupo){
 }
 
 int pegar_mesas(int tam_grupo) {
+  printf("pegar_mesas\n");
   int numeroDeMesas = numMesas(tam_grupo);
   //printf("numeroDeMesas: %d; tam_grupo: %d\n", numeroDeMesas, tam_grupo); ok!
 
@@ -84,12 +86,14 @@ int pegar_mesas(int tam_grupo) {
 }
 
 void garcom_tchau(int tam_grupo) {
+  printf("garcom_tchau\n");
   for(int i = 0; i<numMesas(tam_grupo); i++){
     sem_post(&sGarcons);
   }
 }
 
 void garcom_chamar() {
+  printf("garcom_tchau\n");
   sem_wait(&sGarcons); //se pah essa função eh só isso msm
 }
 
