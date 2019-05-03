@@ -15,6 +15,8 @@ sem_t sGarcons, sMesas, sLockMesas;
 
 pthread_mutex_t pegaFatia;
 
+queue_t smartDeck;
+
 int pizzariaAberta = 0; //famigerado True
 
 
@@ -28,7 +30,8 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   sem_init(&sLockMesas,0, 1); // decidi usar semaforo para que haja fila de clientes
   //se fosse mutex, qualquer um poderia pegar quando liberasse. semaforo gera fila.
 
-
+  //pedidos
+  queue_init(&smartDeck, tam_deck);
 }
 
 void pizzeria_close() {
@@ -41,6 +44,7 @@ void pizzeria_destroy() {
   pthread_mutex_destroy(&pegaFatia);
   sem_destroy(&sMesas);
   sem_destroy(&sLockMesas);
+  queue_destroy(&smartDeck);
 }
 
 void pizza_assada(pizza_t* pizza) {
@@ -97,7 +101,10 @@ void garcom_chamar() {
   sem_wait(&sGarcons); //se pah essa função eh só isso msm
 }
 
-void fazer_pedido(pedido_t* pedido) {
+void fazer_pedido(pedido_t* pedido) { // se pah ta pronto, reler no trabalho
+  sem_wait(&sGarcons);
+  queue_push_back(&smartDeck, (void*) pedido);
+  sem_post(&sGarcons);
 }
 
 int pizza_pegar_fatia(pizza_t* pizza) {
