@@ -20,6 +20,10 @@ queue_t smartDeck;
 int pizzariaAberta = 0; //famigerado True
 
 
+void *pizzaiolo(void *arg){
+
+}
+
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("chamou init");
   sem_init(&sGarcons, 0,n_garcons);
@@ -32,6 +36,15 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
 
   //pedidos
   queue_init(&smartDeck, tam_deck);
+  
+  //pizzaiolos
+  pthread_t pizzaiolos[n_garcons];
+  for (int i = 0; i < n_pizzaiolos; i++) {
+    pthread_create(&pizzaiolos[i], NULL, pizzaiolo, NULL);
+  }
+  for (int i = 0; i < n_pizzaiolos; i++) {
+    pthread_join(threads[i], NULL);
+  }
 }
 
 void pizzeria_close() {
