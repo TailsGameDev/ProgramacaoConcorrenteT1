@@ -19,6 +19,8 @@ queue_t smartDeck;
 
 //pizzaiolos
 sem_t sPizzaiolos;
+pthread_t *pizzaiolos;
+int tamanhoArrayPizzaiolos;
 
 int pizzariaAberta = 0; //famigerado True
 
@@ -29,7 +31,7 @@ void *pizzaiolo(void *arg){
 }
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
-  printf("chamou init");
+  printf("chamou init"); fflush(NULL);
   sem_init(&sGarcons, 0,n_garcons);
   pthread_mutex_init(&pegaFatia, NULL);
 
@@ -42,14 +44,13 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   queue_init(&smartDeck, tam_deck);
 
   //pizzaiolos
+  tamanhoArrayPizzaiolos = n_pizzaiolos;
   sem_init(&sPizzaiolos,0, 0);
-  pthread_t pizzaiolos[n_pizzaiolos];
+  pizzaiolos = (pthread_t*) malloc(n_pizzaiolos*sizeof(pthread_t));
   for (int i = 0; i < n_pizzaiolos; i++) {
     pthread_create(&pizzaiolos[i], NULL, pizzaiolo, NULL);
   }
-  for (int i = 0; i < n_pizzaiolos; i++) {
-    pthread_join(pizzaiolos[i], NULL);
-  }
+
 }
 
 void pizzeria_close() {
@@ -64,7 +65,11 @@ void pizzeria_destroy() {
   sem_destroy(&sLockMesas);
   queue_destroy(&smartDeck);
   //pizzaiolos
+  for (int i = 0; i < tamanhoArrayPizzaiolos; i++) {
+    pthread_join(pizzaiolos[i], NULL);
+  }
   sem_destroy(&sPizzaiolos);
+  free(pizzaiolos);
 }
 
 void pizza_assada(pizza_t* pizza) {
