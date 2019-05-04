@@ -38,7 +38,7 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   queue_init(&smartDeck, tam_deck);
   
   //pizzaiolos
-  pthread_t pizzaiolos[n_garcons];
+  pthread_t pizzaiolos[n_pizzaiolos];
   for (int i = 0; i < n_pizzaiolos; i++) {
     pthread_create(&pizzaiolos[i], NULL, pizzaiolo, NULL);
   }
