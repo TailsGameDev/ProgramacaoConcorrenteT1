@@ -62,11 +62,13 @@ int numMesas(int tam_grupo){
 }
 
 int pegar_mesas(int tam_grupo) {
-  printf("pegar_mesas\n");
-  int numeroDeMesas = numMesas(tam_grupo);
+
   //printf("numeroDeMesas: %d; tam_grupo: %d\n", numeroDeMesas, tam_grupo); ok!
 
   if (pizzariaAberta) {
+      printf("pegar_mesas\n");
+      int numeroDeMesas = numMesas(tam_grupo);
+    
     /*Logica de escolher mesas
     //
     //acho que o canale eh um grupo de clientes pegar mesas de cada vez,
