@@ -67,7 +67,7 @@ int pegar_mesas(int tam_grupo) {
 
   if (pizzariaAberta) {
       printf("pegar_mesas\n");
-      int numeroDeMesas = numMesas(tam_grupo);
+      int numeroDeMesas = numMesas(tam_grupo); //funcao que calcula o numero de mesas necessárias para o grupo
     
     /*Logica de escolher mesas
     //
@@ -95,6 +95,7 @@ void garcom_tchau(int tam_grupo) {
   printf("garcom_tchau\n");
   for(int i = 0; i<numMesas(tam_grupo); i++){
     sem_post(&sGarcons);
+    sem_post(&sMesas); // Libera as mesas quando sinaliza que o grupo vai embora
   }
 }
 
