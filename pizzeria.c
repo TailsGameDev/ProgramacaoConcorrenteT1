@@ -92,6 +92,7 @@ int pegar_mesas(int tam_grupo) {
 }
 
 void garcom_tchau(int tam_grupo) {
+  sem_post(&sGarcons);
   printf("garcom_tchau\n");
   for(int i = 0; i<numMesas(tam_grupo); i++){
     sem_post(&sGarcons);
