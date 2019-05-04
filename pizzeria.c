@@ -105,9 +105,9 @@ void garcom_chamar() {
 }
 
 void fazer_pedido(pedido_t* pedido) { // se pah ta pronto, reler no trabalho
-  sem_wait(&sGarcons);
+  
   queue_push_back(&smartDeck, (void*) pedido);
-  sem_post(&sGarcons);
+  
 }
 
 int pizza_pegar_fatia(pizza_t* pizza) {
