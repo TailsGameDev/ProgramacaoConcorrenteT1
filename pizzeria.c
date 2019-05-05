@@ -25,23 +25,49 @@ pthread_mutex_t pegaFatia;
 queue_t smartDeck;
 sem_t sProduzPedido, sConsomePedido;
 
+//forno
+sem_t sForno;
+pizza_t** pizzaDoPizzaiolo;
+pthread_mutex_t* esperaTuaPizzaAssar;
+
 //pizzaiolos
 pthread_t *pizzaiolos;
 int tamanhoArrayPizzaiolos;
 pthread_mutex_t pahDePizza;
+int* indicesPizzaiolo;
 
 int pizzariaAberta = 1; //famigerado True
 
 //smart deck usa logica do buffer circular (produtor e consumidor)
 void *pizzaiolo(void *arg){
+  int i = *((int*)arg); // identificador do pizzaiolo
   while (pizzariaAberta){
+    //pega pedido da smart deck
     pedido_t *pedido;
     sem_wait(&sConsomePedido);
     pedido = (pedido_t*) queue_wait(&smartDeck);
     sem_post(&sProduzPedido);
-    pizzaiolo_montar_pizza(pedido);
+
+    //monta pizza
+    pizzaDoPizzaiolo[i] = pizzaiolo_montar_pizza(pedido);
+
+    //poe pizza no forno
     pthread_mutex_lock(&pahDePizza);
+    sem_wait(&sForno); // <- ocupa um espaco no forno
+    pthread_mutex_lock(&esperaTuaPizzaAssar[i]); //o unlock eh qd fica pronta
+    pizzaiolo_colocar_forno(pizzaDoPizzaiolo[i]);
     pthread_mutex_unlock(&pahDePizza);
+
+    //tira pizza do forno
+    pthread_mutex_lock(&esperaTuaPizzaAssar[i]); //para ateh ficar pronta
+    pthread_mutex_lock(&pahDePizza);
+    pizzaiolo_retirar_forno(pizzaDoPizzaiolo[i]);
+    sem_post(&sForno); // desocupa espaco do forno
+    pthread_mutex_unlock(&pahDePizza);
+    pthread_mutex_unlock(&esperaTuaPizzaAssar[i]); //destrava pra proxima iteracao
+
+    //espera-se que a pizza esteja pronta aqui.
+    printf("pizzaiolo %d terminou uma pizza\n",i);
   }
   pthread_exit(NULL);
 }
@@ -49,12 +75,9 @@ void *pizzaiolo(void *arg){
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
   printf("pizzaiolo:\n");
-  printf("-poe no forno (que tem tamanho limitado)\n");
-  printf("-tira pizza pronta do forno\n");
   printf("-coloca pizza em local seguro\n");
   printf("-espaco para soh uma pizza ao lado do deck\n");
   printf("garcom pega pizza e leva ate a mesa correspondente\n");
-  printf("funcao pizza_assada\n");
   printf("pegador de pizza individual de cada pizza\n");
   printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
   fflush(NULL);
@@ -74,12 +97,21 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   queue_init(&smartDeck, tam_deck);
   sem_init(&sProduzPedido, 0 , tam_deck);
   sem_init(&sConsomePedido, 0 , 0);
-  //pizzaiolos
+
+  //forno
+  sem_init(&sForno,0,tam_forno);
+
+  //pizzaiolos  //#######################RESOLVER PROBLEMA DO INDEX VARIAVEL####
   pthread_mutex_init(&pahDePizza, NULL);
+  pizzaDoPizzaiolo = malloc(n_pizzaiolos*sizeof(pizza_t*));
+  indicesPizzaiolo = malloc(n_pizzaiolos*sizeof(int*));
+  esperaTuaPizzaAssar = (pthread_mutex_t*) malloc(n_pizzaiolos*sizeof(pthread_mutex_t));
   tamanhoArrayPizzaiolos = n_pizzaiolos;
   pizzaiolos = (pthread_t*) malloc(n_pizzaiolos*sizeof(pthread_t));
-  for (int i = 0; i < n_pizzaiolos; i++) {
-    pthread_create(&pizzaiolos[i], NULL, pizzaiolo, NULL);
+  for (int i = 0; i < n_pizzaiolos; i++) { //i servirah como identificador
+    indicesPizzaiolo[i] = i;
+    pthread_mutex_init(&esperaTuaPizzaAssar[i], NULL);
+    pthread_create(&pizzaiolos[i], NULL, pizzaiolo, (void*) &indicesPizzaiolo[i]);
   }
 
 }
@@ -104,18 +136,30 @@ void pizzeria_destroy() {
   queue_destroy(&smartDeck);
   //foi deixado para destruir semaforos depois dos pizzaiolos que os usam
 
+  //forno
+  sem_destroy(&sForno);
+
   //pizzaiolos
   pthread_mutex_destroy(&pahDePizza);
   for (int i = 0; i < tamanhoArrayPizzaiolos; i++) {
     pthread_join(pizzaiolos[i], NULL);
+    pthread_mutex_destroy(&esperaTuaPizzaAssar[i]);
   }
   sem_destroy(&sConsomePedido);
   sem_destroy(&sProduzPedido);
   free(pizzaiolos);
+  free(pizzaDoPizzaiolo);
+  free(esperaTuaPizzaAssar);
+  free(indicesPizzaiolo);
 }
 
 void pizza_assada(pizza_t* pizza) {
-  printf("pizza_assada\n");
+  for (int i = 0; i < tamanhoArrayPizzaiolos; i++){
+    if (pizzaDoPizzaiolo[i] == pizza){
+      pthread_mutex_unlock(&esperaTuaPizzaAssar[i]);
+      return;
+    }
+  }
 }
 
 //funcao que calcula o numero de mesas necessárias para um grupo
