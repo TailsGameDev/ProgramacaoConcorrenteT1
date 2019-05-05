@@ -12,10 +12,16 @@
 //default:
 //INE5410_INFO=1 ./program 2 2 40 3 8 40 10
 
-sem_t sGarcons, sMesas, sLockMesas;
+//garcons
+sem_t sGarcons;
 
+//alocacao de mesas
+sem_t sMesas, sLockMesas;
+
+//pegador de fatias, dos clientes
 pthread_mutex_t pegaFatia;
 
+//pedidos
 queue_t smartDeck;
 
 //pizzaiolos
@@ -44,15 +50,19 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   printf("-espaco para soh uma pizza ao lado do deck\n");
   printf("garcom pega pizza e leva ate a mesa correspondente\n");
   printf("funcao pizza_assada\n");
+  printf("pegador de pizza individual de cada pizza\n");
   printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
 
+  //garcons
   sem_init(&sGarcons, 0,n_garcons);
-  pthread_mutex_init(&pegaFatia, NULL);
 
-  //para pegar as mesas:
+  //alocacao de mesas
   sem_init(&sMesas, 0, n_mesas);
   sem_init(&sLockMesas,0, 1); // decidi usar semaforo para que haja fila de clientes
   //se fosse mutex, qualquer um poderia pegar quando liberasse. semaforo gera fila.
+
+  //pegador de fatias, dos clientes
+  pthread_mutex_init(&pegaFatia, NULL);
 
   //pedidos
   queue_init(&smartDeck, tam_deck);
@@ -73,11 +83,19 @@ void pizzeria_close() {
 }
 
 void pizzeria_destroy() {
+  //garcons
   sem_destroy(&sGarcons);
-  pthread_mutex_destroy(&pegaFatia);
+
+  //alocacao de mesas
   sem_destroy(&sMesas);
   sem_destroy(&sLockMesas);
+
+  //pegador de fatias, dos clientes
+  pthread_mutex_destroy(&pegaFatia);
+
+  //pedidos
   queue_destroy(&smartDeck);
+
   //pizzaiolos
   for (int i = 0; i < tamanhoArrayPizzaiolos; i++) {
     pthread_join(pizzaiolos[i], NULL);
@@ -90,6 +108,7 @@ void pizza_assada(pizza_t* pizza) {
   printf("pizza_assada\n");
 }
 
+//funcao que calcula o numero de mesas necessárias para um grupo
 int numMesas(int tam_grupo){
   int numeroDeMesas = 0;
   int tam = tam_grupo;
@@ -100,17 +119,15 @@ int numMesas(int tam_grupo){
   return numeroDeMesas;
 }
 
+/*Logica de escolher mesas
+//
+//acho que o canale eh um grupo de clientes pegar mesas de cada vez,
+//dae ele pega todas as mesas que precisa e entao destrava pros outros
+*/
 int pegar_mesas(int tam_grupo) {
   //printf("numeroDeMesas: %d; tam_grupo: %d\n", numeroDeMesas, tam_grupo); ok!
   if (pizzariaAberta) {
-    int numeroDeMesas = numMesas(tam_grupo); //funcao que calcula o numero de mesas necessárias para o grupo
-    /*Logica de escolher mesas
-    //
-    //acho que o canale eh um grupo de clientes pegar mesas de cada vez,
-    //dae ele pega todas as mesas que precisa e entao destrava pros outros
-    //se usar 2 semaforos ao inves de um mutex e um semaforo, acho q fica
-    //fila mais justa pros clientes
-    */
+    int numeroDeMesas = numMesas(tam_grupo);
     sem_wait(&sLockMesas);
       if(!pizzariaAberta){ //caso a pizzaria fechou enquanto esperava
         sem_post(&sLockMesas);
@@ -140,11 +157,12 @@ void garcom_chamar() {
   sem_wait(&sGarcons); //se pah essa função eh só isso msm
 }
 
-void fazer_pedido(pedido_t* pedido) { // se pah ta pronto, reler no trabalho
+void fazer_pedido(pedido_t* pedido) { // todo: limite da smart deck
   queue_push_back(&smartDeck, (void*) pedido);
   sem_post(&sPizzaiolos);
 }
 
+//estah usando um pegador para a pizzaria toda!!!
 int pizza_pegar_fatia(pizza_t* pizza) {
   //na linha 215 o helper atribui 12 a pizza->fatias
   pthread_mutex_lock(&pegaFatia);
@@ -157,5 +175,3 @@ int pizza_pegar_fatia(pizza_t* pizza) {
       return -1;
     }
 }
-
-//Beleza agora consigo editar
