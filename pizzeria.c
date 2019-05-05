@@ -34,18 +34,18 @@ int pizzariaAberta = 1; //famigerado True
 //smart deck usa logica do buffer circular (produtor e consumidor)
 void *pizzaiolo(void *arg){
   while (pizzariaAberta){
+    pedido_t *pedido;
     sem_wait(&sConsomePedido);
+    pedido = (pedido_t*) queue_wait(&smartDeck);
     sem_post(&sProduzPedido);
+    pizzaiolo_montar_pizza(pedido);
   }
   pthread_exit(NULL);
 }
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
-  printf("implementar limite smart deck\n");
   printf("pizzaiolo:\n");
-  printf("-pega pedido\n");
-  printf("-monta pizza\n");
   printf("-pega a pah\n");
   printf("-poe no forno (que tem tamanho limitado)\n");
   printf("-tira pizza pronta do forno\n");
