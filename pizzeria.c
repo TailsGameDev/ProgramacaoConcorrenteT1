@@ -27,14 +27,26 @@ int pizzariaAberta = 1; //famigerado True
 
 
 void *pizzaiolo(void *arg){
-  printf("pizzaiolo criado\n"); fflush(NULL);
   sem_wait(&sPizzaiolos);
-  printf("pizzaiolo terminou\n"); fflush(NULL);
   pthread_exit(NULL);
 }
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
-  printf("chamou init"); fflush(NULL);
+  printf("LISTINHA DO QUE FALTA FAZER\n");
+  printf("implementar limite smart deck\n");
+  printf("LISTINHA DO QUE FALTA FAZER\n");
+  printf("pizzaiolo:\n");
+  printf("-pega pedido\n");
+  printf("-monta pizza\n");
+  printf("-pega a pah\n");
+  printf("-poe no forno (que tem tamanho limitado)\n");
+  printf("-tira pizza pronta do forno\n");
+  printf("-coloca pizza em local seguro\n");
+  printf("-espaco para soh uma pizza ao lado do deck\n");
+  printf("garcom pega pizza e leva ate a mesa correspondente\n");
+  printf("funcao pizza_assada\n");
+  printf("FIM DA LISTINHA DO QUE FALTA FAZER\n");
+
   sem_init(&sGarcons, 0,n_garcons);
   pthread_mutex_init(&pegaFatia, NULL);
 
@@ -68,13 +80,11 @@ void pizzeria_destroy() {
   sem_destroy(&sLockMesas);
   queue_destroy(&smartDeck);
   //pizzaiolos
-  for (int i = 0; i < tamanhoArrayPizzaiolos-1; i++) {
+  for (int i = 0; i < tamanhoArrayPizzaiolos; i++) {
     pthread_join(pizzaiolos[i], NULL);
-    printf("juntei pizzaiolo\n");
   }
   sem_destroy(&sPizzaiolos);
   free(pizzaiolos);
-  printf("retornei de destroy\n");
 }
 
 void pizza_assada(pizza_t* pizza) {
@@ -132,7 +142,6 @@ void garcom_chamar() {
 }
 
 void fazer_pedido(pedido_t* pedido) { // se pah ta pronto, reler no trabalho
-  printf("pedido feito\n"); fflush(NULL); //caina
   queue_push_back(&smartDeck, (void*) pedido);
   sem_post(&sPizzaiolos);
 }
