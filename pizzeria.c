@@ -75,10 +75,13 @@ void *pizzaiolo(void *arg){
     //poe a pizza em local seguro
     pthread_mutex_lock(&espacoParaPizza);
 
-    //chama o garcom ######fazer uma thread para o garcom entregar ##########
+    //chama o garcom e lhe entrega a pizza
     sem_wait(&sGarcons);
-    garcom_entregar(pizzaDoPizzaiolo[i]);
     pthread_mutex_unlock(&espacoParaPizza);
+
+    //######fazer uma thread para o garcom entregar ##########
+    garcom_entregar(pizzaDoPizzaiolo[i]);
+    sem_post(&sGarcons);
 
   }
   pthread_exit(NULL);
@@ -217,7 +220,7 @@ int pegar_mesas(int tam_grupo) {
 
 void garcom_tchau(int tam_grupo) {
 
-  printf("garcom_tchau\n");
+  printf("garcom_tchau. tam_grupo: %d\n", tam_grupo);
   for(int i = 0; i<numMesas(tam_grupo); i++){
     sem_post(&sMesas); // Libera as mesas quando sinaliza que o grupo vai embora
   }
@@ -225,7 +228,6 @@ void garcom_tchau(int tam_grupo) {
 }
 
 void garcom_chamar() {
-  printf("garcom_tchau\n");
   sem_wait(&sGarcons); //se pah essa função eh só isso msm
 }
 
