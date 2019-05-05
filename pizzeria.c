@@ -28,6 +28,7 @@ sem_t sProduzPedido, sConsomePedido;
 //pizzaiolos
 pthread_t *pizzaiolos;
 int tamanhoArrayPizzaiolos;
+pthread_mutex_t pahDePizza;
 
 int pizzariaAberta = 1; //famigerado True
 
@@ -39,6 +40,8 @@ void *pizzaiolo(void *arg){
     pedido = (pedido_t*) queue_wait(&smartDeck);
     sem_post(&sProduzPedido);
     pizzaiolo_montar_pizza(pedido);
+    pthread_mutex_lock(&pahDePizza);
+    pthread_mutex_unlock(&pahDePizza);
   }
   pthread_exit(NULL);
 }
@@ -46,7 +49,6 @@ void *pizzaiolo(void *arg){
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
   printf("pizzaiolo:\n");
-  printf("-pega a pah\n");
   printf("-poe no forno (que tem tamanho limitado)\n");
   printf("-tira pizza pronta do forno\n");
   printf("-coloca pizza em local seguro\n");
@@ -73,6 +75,7 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   sem_init(&sProduzPedido, 0 , tam_deck);
   sem_init(&sConsomePedido, 0 , 0);
   //pizzaiolos
+  pthread_mutex_init(&pahDePizza, NULL);
   tamanhoArrayPizzaiolos = n_pizzaiolos;
   pizzaiolos = (pthread_t*) malloc(n_pizzaiolos*sizeof(pthread_t));
   for (int i = 0; i < n_pizzaiolos; i++) {
@@ -102,6 +105,7 @@ void pizzeria_destroy() {
   //foi deixado para destruir semaforos depois dos pizzaiolos que os usam
 
   //pizzaiolos
+  pthread_mutex_destroy(&pahDePizza);
   for (int i = 0; i < tamanhoArrayPizzaiolos; i++) {
     pthread_join(pizzaiolos[i], NULL);
   }
