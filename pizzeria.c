@@ -26,15 +26,18 @@ queue_t smartDeck;
 sem_t sProduzPedido, sConsomePedido;
 
 //forno
-sem_t sForno;
-pizza_t** pizzaDoPizzaiolo;
-pthread_mutex_t* esperaTuaPizzaAssar;
+sem_t sForno; // <- controla tamanho do forno
+pizza_t** pizzaDoPizzaiolo; //os 3 arrays controlam a situacao de colocar
+pthread_mutex_t* esperaTuaPizzaAssar;//uma pizza do forno e tirar a mesma assada
+int* indicesPizzaiolo;
+
+//espaco ao lado da smart deck
+pthread_mutex_t espacoParaPizza;
 
 //pizzaiolos
 pthread_t *pizzaiolos;
 int tamanhoArrayPizzaiolos;
 pthread_mutex_t pahDePizza;
-int* indicesPizzaiolo;
 
 int pizzariaAberta = 1; //famigerado True
 
@@ -68,6 +71,15 @@ void *pizzaiolo(void *arg){
 
     //espera-se que a pizza esteja pronta aqui.
     printf("pizzaiolo %d terminou uma pizza\n",i);
+
+    //poe a pizza em local seguro
+    pthread_mutex_lock(&espacoParaPizza);
+
+    //chama o garcom ######fazer uma thread para o garcom entregar ##########
+    sem_wait(&sGarcons);
+    garcom_entregar(pizzaDoPizzaiolo[i]);
+    pthread_mutex_unlock(&espacoParaPizza);
+
   }
   pthread_exit(NULL);
 }
@@ -75,9 +87,7 @@ void *pizzaiolo(void *arg){
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
   printf("pizzaiolo:\n");
-  printf("-coloca pizza em local seguro\n");
-  printf("-espaco para soh uma pizza ao lado do deck\n");
-  printf("garcom pega pizza e leva ate a mesa correspondente\n");
+  printf("garcom levar pizza ser uma thread\n");
   printf("pegador de pizza individual de cada pizza\n");
   printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
   fflush(NULL);
@@ -100,12 +110,16 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
 
   //forno
   sem_init(&sForno,0,tam_forno);
-
-  //pizzaiolos  //#######################RESOLVER PROBLEMA DO INDEX VARIAVEL####
-  pthread_mutex_init(&pahDePizza, NULL);
   pizzaDoPizzaiolo = malloc(n_pizzaiolos*sizeof(pizza_t*));
-  indicesPizzaiolo = malloc(n_pizzaiolos*sizeof(int*));
   esperaTuaPizzaAssar = (pthread_mutex_t*) malloc(n_pizzaiolos*sizeof(pthread_mutex_t));
+  indicesPizzaiolo = malloc(n_pizzaiolos*sizeof(int*));
+
+  //espaco ao lado da smart deck
+  pthread_mutex_init(&espacoParaPizza, NULL);
+
+  //pizzaiolos
+
+  pthread_mutex_init(&pahDePizza, NULL);
   tamanhoArrayPizzaiolos = n_pizzaiolos;
   pizzaiolos = (pthread_t*) malloc(n_pizzaiolos*sizeof(pthread_t));
   for (int i = 0; i < n_pizzaiolos; i++) { //i servirah como identificador
@@ -138,6 +152,10 @@ void pizzeria_destroy() {
 
   //forno
   sem_destroy(&sForno);
+  //foi deixado para destruir mutex e mais coisas que o pizzaiolo usa depois
+
+  //espaco ao lado da smart deck
+  pthread_mutex_destroy(&espacoParaPizza);
 
   //pizzaiolos
   pthread_mutex_destroy(&pahDePizza);
