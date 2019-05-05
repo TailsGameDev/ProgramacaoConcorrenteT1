@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 //testes:
+//s
 //default:
 //INE5410_INFO=1 ./program 2 2 40 3 8 40 10
 

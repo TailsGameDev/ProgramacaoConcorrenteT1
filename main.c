@@ -11,7 +11,7 @@
 int main(int argc, char** argv) {
     int tam_forno = 1, n_pizzaiolos = 1, n_mesas = 10, n_garcons = 1,
         tam_deck = 0, n_grupos = 0, segs_execucao = 10;
-
+    
     if (argc < 7) {
         printf("Faltaram argumentos!\n"
                "Uso:%s tam_forno n_pizzaiolos n_mesas n_garcons "
@@ -24,10 +24,10 @@ int main(int argc, char** argv) {
     n_garcons    = atoi(argv[4]);
     tam_deck     = atoi(argv[5]);
     n_grupos     = atoi(argv[6]);
-    if (argc > 7)
+    if (argc > 7) 
         segs_execucao = atoi(argv[7]);
 
-
+   
     helper_init(tam_forno, n_pizzaiolos, n_mesas, n_garcons, tam_deck, n_grupos);
     pizzeria_init(tam_forno, n_pizzaiolos, n_mesas, n_garcons, tam_deck, n_grupos);
     pizzeria_open();
@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
     printf("Executando simulação por %d segundos\n", segs_execucao);
     sleep(segs_execucao);
     printf("Passados %d segundos, fechando pizzaria\n", segs_execucao);
-
-
+    
+    
     pizzeria_close();
     pizzeria_destroy();
     helper_destroy();
