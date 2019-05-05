@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 //testes:
+//s
 //default:
 //INE5410_INFO=1 ./program 2 2 40 3 8 40 10
 
@@ -17,11 +18,23 @@ pthread_mutex_t pegaFatia;
 
 queue_t smartDeck;
 
-int pizzariaAberta = 0; //famigerado True
+//pizzaiolos
+sem_t sPizzaiolos;
+pthread_t *pizzaiolos;
+int tamanhoArrayPizzaiolos;
 
+int pizzariaAberta = 1; //famigerado True
+
+
+void *pizzaiolo(void *arg){
+  printf("pizzaiolo criado\n"); fflush(NULL);
+  sem_wait(&sPizzaiolos);
+  printf("pizzaiolo terminou\n"); fflush(NULL);
+  pthread_exit(NULL);
+}
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
-  printf("chamou init");
+  printf("chamou init"); fflush(NULL);
   sem_init(&sGarcons, 0,n_garcons);
   pthread_mutex_init(&pegaFatia, NULL);
 
@@ -32,11 +45,20 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
 
   //pedidos
   queue_init(&smartDeck, tam_deck);
+
+  //pizzaiolos
+  tamanhoArrayPizzaiolos = n_pizzaiolos;
+  sem_init(&sPizzaiolos,0, 0);
+  pizzaiolos = (pthread_t*) malloc(n_pizzaiolos*sizeof(pthread_t));
+  for (int i = 0; i < n_pizzaiolos; i++) {
+    pthread_create(&pizzaiolos[i], NULL, pizzaiolo, NULL);
+  }
+
 }
 
 void pizzeria_close() {
   //se pah a funcao eh soh isso:
-  pizzariaAberta = 1; //famigerado false
+  pizzariaAberta = 0; //famigerado false
 }
 
 void pizzeria_destroy() {
@@ -45,6 +67,14 @@ void pizzeria_destroy() {
   sem_destroy(&sMesas);
   sem_destroy(&sLockMesas);
   queue_destroy(&smartDeck);
+  //pizzaiolos
+  for (int i = 0; i < tamanhoArrayPizzaiolos-1; i++) {
+    pthread_join(pizzaiolos[i], NULL);
+    printf("juntei pizzaiolo\n");
+  }
+  sem_destroy(&sPizzaiolos);
+  free(pizzaiolos);
+  printf("retornei de destroy\n");
 }
 
 void pizza_assada(pizza_t* pizza) {
@@ -62,11 +92,9 @@ int numMesas(int tam_grupo){
 }
 
 int pegar_mesas(int tam_grupo) {
-  printf("pegar_mesas\n");
-  int numeroDeMesas = numMesas(tam_grupo);
   //printf("numeroDeMesas: %d; tam_grupo: %d\n", numeroDeMesas, tam_grupo); ok!
-
   if (pizzariaAberta) {
+    int numeroDeMesas = numMesas(tam_grupo); //funcao que calcula o numero de mesas necessárias para o grupo
     /*Logica de escolher mesas
     //
     //acho que o canale eh um grupo de clientes pegar mesas de cada vez,
@@ -90,10 +118,12 @@ int pegar_mesas(int tam_grupo) {
 }
 
 void garcom_tchau(int tam_grupo) {
+
   printf("garcom_tchau\n");
   for(int i = 0; i<numMesas(tam_grupo); i++){
-    sem_post(&sGarcons);
+    sem_post(&sMesas); // Libera as mesas quando sinaliza que o grupo vai embora
   }
+  sem_post(&sGarcons);
 }
 
 void garcom_chamar() {
@@ -102,9 +132,9 @@ void garcom_chamar() {
 }
 
 void fazer_pedido(pedido_t* pedido) { // se pah ta pronto, reler no trabalho
-  sem_wait(&sGarcons);
+  printf("pedido feito\n"); fflush(NULL); //caina
   queue_push_back(&smartDeck, (void*) pedido);
-  sem_post(&sGarcons);
+  sem_post(&sPizzaiolos);
 }
 
 int pizza_pegar_fatia(pizza_t* pizza) {
@@ -119,3 +149,5 @@ int pizza_pegar_fatia(pizza_t* pizza) {
       return -1;
     }
 }
+
+//Beleza agora consigo editar
