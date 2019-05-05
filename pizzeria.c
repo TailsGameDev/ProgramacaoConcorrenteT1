@@ -32,9 +32,8 @@ void *pizzaiolo(void *arg){
 }
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
-  printf("LISTINHA DO QUE FALTA FAZER\n");
+  printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
   printf("implementar limite smart deck\n");
-  printf("LISTINHA DO QUE FALTA FAZER\n");
   printf("pizzaiolo:\n");
   printf("-pega pedido\n");
   printf("-monta pizza\n");
@@ -45,7 +44,7 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   printf("-espaco para soh uma pizza ao lado do deck\n");
   printf("garcom pega pizza e leva ate a mesa correspondente\n");
   printf("funcao pizza_assada\n");
-  printf("FIM DA LISTINHA DO QUE FALTA FAZER\n");
+  printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
 
   sem_init(&sGarcons, 0,n_garcons);
   pthread_mutex_init(&pegaFatia, NULL);
