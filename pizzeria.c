@@ -23,17 +23,20 @@ pthread_mutex_t pegaFatia;
 
 //pedidos
 queue_t smartDeck;
+sem_t sProduzPedido, sConsomePedido;
 
 //pizzaiolos
-sem_t sPizzaiolos;
 pthread_t *pizzaiolos;
 int tamanhoArrayPizzaiolos;
 
 int pizzariaAberta = 1; //famigerado True
 
-
+//smart deck usa logica do buffer circular (produtor e consumidor)
 void *pizzaiolo(void *arg){
-  sem_wait(&sPizzaiolos);
+  while (pizzariaAberta){
+    sem_wait(&sConsomePedido);
+    sem_post(&sProduzPedido);
+  }
   pthread_exit(NULL);
 }
 
@@ -52,6 +55,7 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   printf("funcao pizza_assada\n");
   printf("pegador de pizza individual de cada pizza\n");
   printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
+  fflush(NULL);
 
   //garcons
   sem_init(&sGarcons, 0,n_garcons);
@@ -66,10 +70,10 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
 
   //pedidos
   queue_init(&smartDeck, tam_deck);
-
+  sem_init(&sProduzPedido, 0 , tam_deck);
+  sem_init(&sConsomePedido, 0 , 0);
   //pizzaiolos
   tamanhoArrayPizzaiolos = n_pizzaiolos;
-  sem_init(&sPizzaiolos,0, 0);
   pizzaiolos = (pthread_t*) malloc(n_pizzaiolos*sizeof(pthread_t));
   for (int i = 0; i < n_pizzaiolos; i++) {
     pthread_create(&pizzaiolos[i], NULL, pizzaiolo, NULL);
@@ -95,12 +99,14 @@ void pizzeria_destroy() {
 
   //pedidos
   queue_destroy(&smartDeck);
+  //foi deixado para destruir semaforos depois dos pizzaiolos que os usam
 
   //pizzaiolos
   for (int i = 0; i < tamanhoArrayPizzaiolos; i++) {
     pthread_join(pizzaiolos[i], NULL);
   }
-  sem_destroy(&sPizzaiolos);
+  sem_destroy(&sConsomePedido);
+  sem_destroy(&sProduzPedido);
   free(pizzaiolos);
 }
 
@@ -157,9 +163,12 @@ void garcom_chamar() {
   sem_wait(&sGarcons); //se pah essa função eh só isso msm
 }
 
-void fazer_pedido(pedido_t* pedido) { // todo: limite da smart deck
+//pedidos
+//smart deck usa logica do buffer circular (produtor e consumidor)
+void fazer_pedido(pedido_t* pedido) {
+  sem_wait(&sProduzPedido);
   queue_push_back(&smartDeck, (void*) pedido);
-  sem_post(&sPizzaiolos);
+  sem_post(&sConsomePedido);
 }
 
 //estah usando um pegador para a pizzaria toda!!!
