@@ -45,6 +45,13 @@ int pizzariaAberta = 1; //famigerado True
 int ultimoClienteVazou = 0;//no fim vai ser mandado tipo uns pedidos sq
 //quer dizer pros pizzaiolos encerrarem
 
+void *garcomEntregaPizza(void *arg){
+  pizza_t *pizza = (pizza_t *) arg;
+  garcom_entregar(pizza);
+  sem_post(&sGarcons);
+  pthread_exit(NULL);
+}
+
 //smart deck usa logica do buffer circular (produtor e consumidor)
 void *pizzaiolo(void *arg){
   int i = *((int*)arg); // identificador do pizzaiolo
@@ -54,7 +61,7 @@ void *pizzaiolo(void *arg){
   while (pizzariaAberta || mesasLivres!=maxMesas){ // 0 eh false
     //pega pedido da smart deck
     pedido_t *pedido;
-    printf("pizzaiolo esperando pedido\n"); fflush(NULL);
+    //printf("pizzaiolo esperando pedido\n"); fflush(NULL);
     sem_wait(&sConsomePedido);
     if (ultimoClienteVazou){
       pthread_exit(NULL);
@@ -99,18 +106,17 @@ void *pizzaiolo(void *arg){
     pthread_mutex_unlock(&espacoParaPizza);
 
     //######fazer uma thread para o garcom entregar ##########
-    garcom_entregar(pizzaDoPizzaiolo[i]);
-    sem_post(&sGarcons);
+    pthread_t garcom;
+    pthread_create(&garcom, NULL, garcomEntregaPizza, (void*) pizzaDoPizzaiolo[i]);
+    //colhendo valor para fazer teste do while
     sem_getvalue(&sMesas, &mesasLivres);
-    printf("compararei: mesasLivres: %d; maxMesas: %d\n", mesasLivres,maxMesas);
+    //printf("compararei: mesasLivres: %d; maxMesas: %d\n", mesasLivres,maxMesas);
   }
   pthread_exit(NULL);
 }
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
-  printf("pizzaiolo:\n");
-  printf("garcom levar pizza ser uma thread\n");
   printf("pegador de pizza individual de cada pizza\n");
   printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
   fflush(NULL);
@@ -227,7 +233,7 @@ int pegar_mesas(int tam_grupo) {
         sem_post(&sLockMesas);
         return -1;
       }
-      printf("OI!! numeroDeMesas: %d; tam_grupo: %d\n", numMesas(tam_grupo), tam_grupo);
+      //printf("OI!! numeroDeMesas: %d; tam_grupo: %d\n", numMesas(tam_grupo), tam_grupo);
       //caso padrao eh alocar umas mesas
       for (int i = numeroDeMesas; i > 0; i--){
           sem_wait(&sMesas);
@@ -240,7 +246,7 @@ int pegar_mesas(int tam_grupo) {
 
 void garcom_tchau(int tam_grupo) {
 
-  printf("TCHAU. tam_grupo: %d. nPosts: %d\n", tam_grupo,numMesas(tam_grupo));
+  //printf("TCHAU. tam_grupo: %d. nPosts: %d\n", tam_grupo,numMesas(tam_grupo));
   fflush(NULL);
   for(int i = 0; i<numMesas(tam_grupo); i++){
     sem_post(&sMesas); // Libera as mesas quando sinaliza que o grupo vai embora
