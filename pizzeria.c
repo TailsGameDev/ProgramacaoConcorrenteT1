@@ -12,6 +12,11 @@
 //default:
 // tamForno npizzaiolos, nmesas, ngarcons, tamdeck, ngrupos, tempo
 //INE5410_INFO=1 ./program
+//mini forno: INE5410_INFO=1 ./program 2 10 40 40 40 40 5
+//greve de pizzaiolos: INE5410_INFO=1 ./program 4 2 40 40 40 40 5
+//Inflacao moveleira: INE5410_INFO=1 ./program 10 10 10 10 40 40 5
+//greve de garcons: INE5410_INFO=1 ./program 10 10 40 2 40 40 5
+//escassez de fichas: INE5410_INFO=1 ./program 10 10 40 40 3 40 5
 
 //garcons
 sem_t sGarcons;
@@ -75,18 +80,18 @@ void *pizzaiolo(void *arg){
 
     //printf("pizzaiolo esperando pah\n"); fflush(NULL);
     //poe pizza no forno
-    pthread_mutex_lock(&pahDePizza);
-    //printf("pizzaiolo esperando forno\n"); fflush(NULL);
+    //printf("pizzaiolo %d esperando forno\n", i); fflush(NULL);
     sem_wait(&sForno); // <- ocupa um espaco no forno
-    //printf("pizzaiolo poe pizza pra assar\n"); fflush(NULL);
+    //printf("pizzaiolo %d poe pizza pra assar\n",i); fflush(NULL);
     pthread_mutex_lock(&esperaTuaPizzaAssar[i]); //o unlock eh qd fica pronta
+    pthread_mutex_lock(&pahDePizza);
     pizzaiolo_colocar_forno(pizzaDoPizzaiolo[i]);
     pthread_mutex_unlock(&pahDePizza);
 
     //tira pizza do forno
-    //printf("pizzaiolo espera pizza assando\n"); fflush(NULL);
+    //printf("pizzaiolo %d espera pizza assando\n",i); fflush(NULL);
     pthread_mutex_lock(&esperaTuaPizzaAssar[i]); //para ateh ficar pronta
-    //printf("pizzaiolo espera pah\n"); fflush(NULL);
+    //printf("pizzaiolo %d espera pah\n",i); fflush(NULL);
     pthread_mutex_lock(&pahDePizza);
     pizzaiolo_retirar_forno(pizzaDoPizzaiolo[i]);
     sem_post(&sForno); // desocupa espaco do forno
