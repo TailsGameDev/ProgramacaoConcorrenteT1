@@ -18,12 +18,14 @@
 //greve de garcons: INE5410_INFO=1 ./program 10 10 40 2 40 40 5
 //escassez de fichas: INE5410_INFO=1 ./program 10 10 40 40 3 40 5
 
+//INE5410_GOH=1 ./program 10 10 40 40 40 40 5
 //garcons
 sem_t sGarcons;
 
 //alocacao de mesas
-sem_t sMesas, sLockMesas;
-int maxMesas;
+sem_t sAlteraMesas;
+int maxMesas, mesasLivres;
+pthread_mutex_t mMesas;
 
 //pegador de fatias, dos clientes
 pthread_mutex_t pegaFatia;
@@ -60,8 +62,6 @@ void *garcomEntregaPizza(void *arg){
 //smart deck usa logica do buffer circular (produtor e consumidor)
 void *pizzaiolo(void *arg){
   int i = *((int*)arg); // identificador do pizzaiolo
-  int mesasLivres;
-  sem_getvalue(&sMesas, &mesasLivres);
   //pizzaiolo soh encerra quando a pizzaria tah fechada e nao tem mais cliente
   while (pizzariaAberta || mesasLivres!=maxMesas){ // 0 eh false
     //pega pedido da smart deck
@@ -113,8 +113,6 @@ void *pizzaiolo(void *arg){
     //######fazer uma thread para o garcom entregar ##########
     pthread_t garcom;
     pthread_create(&garcom, NULL, garcomEntregaPizza, (void*) pizzaDoPizzaiolo[i]);
-    //colhendo valor para fazer teste do while
-    sem_getvalue(&sMesas, &mesasLivres);
     //printf("compararei: mesasLivres: %d; maxMesas: %d\n", mesasLivres,maxMesas);
   }
   pthread_exit(NULL);
@@ -130,10 +128,12 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   sem_init(&sGarcons, 0,n_garcons);
 
   //alocacao de mesas
+  pthread_mutex_init(&mMesas, NULL);
   maxMesas = n_mesas;
-  sem_init(&sMesas, 0, n_mesas);
-  sem_init(&sLockMesas,0, 1); // decidi usar semaforo para que haja fila de clientes
-  //se fosse mutex, qualquer um poderia pegar quando liberasse. semaforo gera fila.
+  pthread_mutex_lock(&mMesas);
+  mesasLivres = n_mesas;
+  pthread_mutex_unlock(&mMesas);
+  sem_init(&sAlteraMesas,0, 1);//semaforo acorda gente quando mesas sao liberadas
 
   //pegador de fatias, dos clientes
   pthread_mutex_init(&pegaFatia, NULL);
@@ -197,8 +197,8 @@ void pizzeria_destroy() {
   pthread_mutex_destroy(&pegaFatia);
 
   //alocacao de mesas
-  sem_destroy(&sMesas);
-  sem_destroy(&sLockMesas);
+  pthread_mutex_destroy(&mMesas);
+  sem_destroy(&sAlteraMesas);
 
   //garcons
   sem_destroy(&sGarcons);
@@ -213,57 +213,58 @@ void pizza_assada(pizza_t* pizza) {
   }
 }
 
-//funcao que calcula o numero de mesas necessárias para um grupo
-int numMesas(int tam_grupo){
-  int numeroDeMesas = 0;
-  int tam = tam_grupo;
-  while (tam > 0){
-    numeroDeMesas++;
-    tam-=4;
-  }
-  return numeroDeMesas;
-}
-
 /*Logica de escolher mesas
 //
 //acho que o canale eh um grupo de clientes pegar mesas de cada vez,
 //dae ele pega todas as mesas que precisa e entao destrava pros outros
 */
 int pegar_mesas(int tam_grupo) {
-  fflush(NULL);
-  if (pizzariaAberta) {
-    int numeroDeMesas = numMesas(tam_grupo);
-    sem_wait(&sLockMesas);
-      if(!pizzariaAberta){ //caso a pizzaria fechou enquanto esperava
-        sem_post(&sLockMesas);
-        return -1;
-      }
-      //printf("OI!! numeroDeMesas: %d; tam_grupo: %d\n", numMesas(tam_grupo), tam_grupo);
-      //caso padrao eh alocar umas mesas
-      for (int i = numeroDeMesas; i > 0; i--){
-          sem_wait(&sMesas);
-      }
-    sem_post(&sLockMesas);
-    return 0;
+  int restoMesas = tam_grupo % 4;
+  int mesasDesejadas = tam_grupo/4;
+  if (restoMesas != 0) mesasDesejadas++;
+  //printf("OI!! numeroDeMesas: %d; tam_grupo: %d\n", mesasDesejadas, tam_grupo);
+  pthread_mutex_lock(&mMesas);
+  while (mesasDesejadas > mesasLivres){
+    pthread_mutex_unlock(&mMesas);
+    //inseri a seguinte linha na expectativa que ele acorde o proximo
+    //sem incrementar de fato o semafro, como diz no slide que faz quando
+    //há alguém já na fila do semáforo
+    sem_post(&sAlteraMesas);
+    if (!pizzariaAberta) return -1;
+    sem_wait(&sAlteraMesas);
+    pthread_mutex_lock(&mMesas);
   }
-  return -1;
+  mesasLivres -= mesasDesejadas;
+  pthread_mutex_unlock(&mMesas);
+  //se tiver sido acordado e a pizzaria já tiver fechado, reverter mudanças
+  //e retornar -1. Isso segue a lógica de fazer o caso comum mais otimizado.
+  if (!pizzariaAberta) {
+    pthread_mutex_lock(&mMesas);
+    mesasLivres += mesasDesejadas;
+    pthread_mutex_unlock(&mMesas);
+    sem_post(&sAlteraMesas); //acorda mais clientes que podem estar esperando
+    sem_post(&sAlteraMesas); //já acorda dois.. pra agilizar se tiver mta gente
+    return -1;
+  }
+  return 0;
 }
 
 void garcom_tchau(int tam_grupo) {
-
+  int restoMesas = tam_grupo % 4;
+  int mesasDesejadas = tam_grupo/4;
+  if (restoMesas != 0) mesasDesejadas++;
   //printf("TCHAU. tam_grupo: %d. nPosts: %d\n", tam_grupo,numMesas(tam_grupo));
-  fflush(NULL);
-  for(int i = 0; i<numMesas(tam_grupo); i++){
-    sem_post(&sMesas); // Libera as mesas quando sinaliza que o grupo vai embora
-  }
+  pthread_mutex_lock(&mMesas);
+  mesasLivres += mesasDesejadas;
+  pthread_mutex_unlock(&mMesas);
+  sem_post(&sAlteraMesas);
   sem_post(&sGarcons);
 
-  int qtddMesas;
-  sem_getvalue(&sMesas, &qtddMesas);
-  int souUltimoGrupoNaPizzariaFechada= !pizzariaAberta&&(qtddMesas==maxMesas);
+  int souUltimoGrupoNaPizzariaFechada= !pizzariaAberta&&(mesasLivres==maxMesas);
 
   if(souUltimoGrupoNaPizzariaFechada){
     ultimoClienteVazou = 1;
+    //o seeguinte for mata todos os pizzaiolos vivos
     for(int i = 0; i < tamanhoArrayPizzaiolos; i++){
       sem_post(&sConsomePedido);
     }
