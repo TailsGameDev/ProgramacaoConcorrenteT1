@@ -18,7 +18,8 @@
 //greve de garcons: INE5410_INFO=1 ./program 10 10 40 2 40 40 5
 //escassez de fichas: INE5410_INFO=1 ./program 10 10 40 40 3 40 5
 
-//INE5410_GOH=1 ./program 10 10 40 40 40 40 5
+//INE5410_GOH=1
+
 //garcons
 sem_t sGarcons;
 
@@ -26,9 +27,6 @@ sem_t sGarcons;
 sem_t sAlteraMesas;
 int maxMesas, mesasLivres;
 pthread_mutex_t mMesas;
-
-//pegador de fatias, dos clientes
-pthread_mutex_t pegaFatia;
 
 //pedidos
 queue_t smartDeck;
@@ -109,7 +107,7 @@ void *pizzaiolo(void *arg){
     //printf("pizzaiolo chamou garcom\n"); fflush(NULL);
     sem_wait(&sGarcons);
     pthread_mutex_unlock(&espacoParaPizza);
-
+    pthread_mutex_init(&pizzaDoPizzaiolo[i]->pegador, NULL);
     //######fazer uma thread para o garcom entregar ##########
     pthread_t garcom;
     pthread_create(&garcom, NULL, garcomEntregaPizza, (void*) pizzaDoPizzaiolo[i]);
@@ -120,7 +118,7 @@ void *pizzaiolo(void *arg){
 
 void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, int tam_deck, int n_grupos) {
   printf("######LISTINHA DO QUE FALTA FAZER######\n\n");
-  printf("pegador de pizza individual de cada pizza\n");
+  printf("otimizar tempo de entrega de pizza\n");
   printf("\n######FIM DA LISTINHA DO QUE FALTA FAZER######\n");
   fflush(NULL);
 
@@ -134,9 +132,6 @@ void pizzeria_init(int tam_forno, int n_pizzaiolos, int n_mesas, int n_garcons, 
   mesasLivres = n_mesas;
   pthread_mutex_unlock(&mMesas);
   sem_init(&sAlteraMesas,0, 1);//semaforo acorda gente quando mesas sao liberadas
-
-  //pegador de fatias, dos clientes
-  pthread_mutex_init(&pegaFatia, NULL);
 
   //pedidos
   queue_init(&smartDeck, tam_deck);
@@ -192,9 +187,6 @@ void pizzeria_destroy() {
   queue_destroy(&smartDeck);
   sem_destroy(&sConsomePedido);
   sem_destroy(&sProduzPedido);
-
-  //pegador de fatias, dos clientes
-  pthread_mutex_destroy(&pegaFatia);
 
   //alocacao de mesas
   pthread_mutex_destroy(&mMesas);
@@ -287,13 +279,13 @@ void fazer_pedido(pedido_t* pedido) {
 //estah usando um pegador para a pizzaria toda!!!
 int pizza_pegar_fatia(pizza_t* pizza) {
   //na linha 215 o helper atribui 12 a pizza->fatias
-  pthread_mutex_lock(&pegaFatia);
+  pthread_mutex_lock(&pizza->pegador);
     if (pizza->fatias > 0){
       pizza->fatias--;
-      pthread_mutex_unlock(&pegaFatia);
+      pthread_mutex_unlock(&pizza->pegador);
       return 0;
     } else {
-      pthread_mutex_unlock(&pegaFatia);
+      pthread_mutex_unlock(&pizza->pegador);
       return -1;
     }
 }
