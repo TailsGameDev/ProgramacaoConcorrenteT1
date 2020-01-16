@@ -1,0 +1,2 @@
+Trabalho na linguagem C, da disciplina Programação Concorrente, da UFSC.
+O programa simula o funcionamento de uma pizzaria. Os clientes fazem pedidos, são atendidos por garçons. As pizzas são produzidas pelos pizzaiolos, que utilizam recursos como o forno, as pás de pizza, e as folhas de pedidos. Depois de comer, os clientes vão embora, desocupando mesas, o que permite que novos clientes recomecem esse ciclo.
